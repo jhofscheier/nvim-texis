@@ -6,12 +6,13 @@ local view = {}
 local cache = require('nvimtexis.cache')
 
 function view.inverse_search(line, file_name)
+	-- resolve possible symlinks
 	local file = vim.api.nvim_call_function('resolve', {file_name})
 	if vim.api.nvim_call_function('mode', {}) == 'i' then
 		vim.cmd('stopinsert')
 	end
 
-	if not vim.api.nvim_buf_is_loaded(file) then
+	if vim.api.nvim_call_function('bufloaded', {file}) == 0 then
 		if vim.api.nvim_call_function('filereadable', {file}) == 1 then
 			local status_ok, _ = pcall(vim.cmd,
 									   cache.nvimtexis_vise_cmd .. ' ' .. file)
