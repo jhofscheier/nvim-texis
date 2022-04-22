@@ -86,4 +86,6 @@ function nvimtexis_cache.init_servernames()
 							nvimtexis_cache.cache_path('nvim_servernames.log')
 end
 
+nvimtexis_cache.nvimtexis_vise_cmd = 'edit'
+
 return nvimtexis_cache
