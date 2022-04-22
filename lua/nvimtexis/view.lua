@@ -10,7 +10,7 @@ local function ends_with(str, ending)
 end
 
 local function is_buffer_loaded(file)
-	for _, buf in ipairs(vim.api.nvim_list_buf()) do
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if ends_with(vim.api.nvim_buf_get_name(buf), file) then
 			return buf
 		end
