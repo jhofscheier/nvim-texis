@@ -5,14 +5,37 @@ local view = {}
 
 local cache = require('nvimtexis.cache')
 
+local function ends_with(str, ending)
+	return ending == "" or str:sub(-#ending) == ending
+end
+
+local function is_buffer_loaded(file)
+	for _, buf in ipairs(vim.api.nvim_list_buf()) do
+		if ends_with(vim.api.nvim_buf_get_name(buf), file) then
+			return buf
+		end
+	end
+	return -1
+end
+
+local function winid_of_buffer(buffer)
+	for _, winid in ipairs(vim.api.nvim_list_wins()) do
+		if vim.api.nvim_win_get_buf(winid) == buffer then
+			return winid
+		end
+	end
+	return -1
+end
+
 function view.inverse_search(line, file_name)
 	-- resolve possible symlinks
 	local file = vim.api.nvim_call_function('resolve', {file_name})
-	if vim.api.nvim_call_function('mode', {}) == 'i' then
+	if vim.api.nvim_get_mode()['mode'] == 'i' then
 		vim.cmd('stopinsert')
 	end
 
-	if vim.api.nvim_call_function('bufloaded', {file}) == 0 then
+	local bufnr = is_buffer_loaded(file)
+	if buf == -1 then
 		if vim.api.nvim_call_function('filereadable', {file}) == 1 then
 			local status_ok, _ = pcall(vim.cmd,
 									   cache.nvimtexis_vise_cmd .. ' ' .. file)
@@ -21,6 +44,7 @@ function view.inverse_search(line, file_name)
 					  cache.nvimtexis_vise_cmd, file)
 				return -3
 			end
+			bufnr = vim.api.nvim_get_current_buf()
 		else
 			print("Reverse goto failed; file not readable: '", file, "'")
 			return -4
@@ -29,11 +53,8 @@ function view.inverse_search(line, file_name)
 
 	-- Get buffer, window, and tab numbers
 	-- * If tab/window exists, switch to it/them
-	local bufnr = vim.api.nvim_buf_get_number(file)
-	local winid = vim.api.nvim_call_function('win_findbuf', {bufnr})
-	-- if exactly one window view open for buffer
-	if #winid == 1 then
-		winid = winid[1]
+	local winid = winid_of_buffer(bufnr)
+	if winid >= 0 then
 		-- do we have to use vim.api.nvim_tabpage_get_number(tabnr)?
 		local tabnr = vim.api.nvim_win_get_tabpage(winid)
 		local winnr = vim.api.nvim_win_get_number(winid)
