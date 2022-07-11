@@ -7,21 +7,26 @@ local cache = require('nvimtexis.cache')
 -- Initialise cache.servernames 
 cache.init_servernames()
 
-function caller.inverse_search(line, file_name)
-	if line > 0 and file_name and file_name ~= '' then
+function caller.inverse_search(filename, line)
+	if line > 0 and filename and filename ~= '' then
 		local servers_file = io.open(cache.servernames, "r")
 		if not servers_file then	
 			vim.cmd('quitall!')
 		end
 		for server in servers_file:lines() do
-			local status_ok, socket = pcall(vim.api.nvim_call_function,
-										    'sockconnect',
-											{'pipe', server, {rpc = 1}})
-			if status_ok then
-				vim.rpcnotify(socket,
-							  'nvim_command',
-							  "lua require('nvimtexis.view').inverse_search(" .. tostring(line) .. ", '" .. file_name .. "')")
-
+			local ok, socket = pcall(vim.api.nvim_call_function,
+								     'sockconnect',
+									 {'pipe', server, {rpc = 1}})
+			if ok then
+				vim.rpcrequest(
+					socket,
+					'nvim_exec_lua',
+					[[return require('nvimtexis.view').inverse_search(...)]],
+					{
+						filename,
+						line,
+					}
+				)
 				vim.api.nvim_call_function('chanclose', {socket})
 			end
 		end
