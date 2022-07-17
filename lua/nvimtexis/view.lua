@@ -3,7 +3,6 @@
 
 local view = {}
 
-local cache = require('nvimtexis.cache')
 local util = require('nvimtexis.util')
 local uv = vim.loop
 
