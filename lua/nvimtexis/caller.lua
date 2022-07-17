@@ -7,7 +7,7 @@ local cache = require('nvimtexis.cache')
 function caller.inverse_search(filename, line)
 	if line > 0 and filename and filename ~= '' then
 		local ok, servers, socket
-		ok, servers = pcall(cache.servernames)
+		ok, servers = pcall(cache.servernames, cache)
 		-- if opening servernames file failed then exit
 		if not ok then
 			vim.cmd('quitall!')
