@@ -1,8 +1,12 @@
 -- Helper functions administrating nvimtexis' sever list cache.
 
-local nvimtexis_cache = {}
+local uv = vim.loop
 
-nvimtexis_cache.servernames = ''
+local cache = {}
+
+cache.filename = vim.api.nvim_call_function('stdpath', {'cache'}) ..
+														'/nvim_servernames.log'
+cache.nvimtexis_vise_cmd = 'edit'
 
 -- write list of strings [data] to file [file_name]
 -- file_name:	string representing valid file name
@@ -17,42 +21,33 @@ local function write_to_file(file_name, data)
 	end
 end
 
--- Function returns the root directory for the nvimtexis cache.
--- The following priority is used:
--- 1. Return user-defined value 'nvimtexis_cache_root' if exists.
--- 2. Return $XDG_CACHE_HOME if defined.
--- 3. Fall back to '$HOME/.cache' if none of the above works.
-function nvimtexis_cache.cache_root()
-	-- 1. check if user-defined value exists
-	if vim.g.nvimtexis_cache_root then
-		return vim.g.nvimtexis_cache_root
-	end
+-- reads servernames from cache file
+-- returns multi-line string
+-- each line represents a sever address
+function cache.servernames()
+	local fd = assert(uv.fs_open(cache.filename, "r", 420))
+	local stat = assert(uv.fs_fstat(fd))
+	local servers = assert(uv.fs_read(fd, stat.size, 0))
+	assert(uv.fs_close(fd))
 
-	-- 2. Is $XDG_CACHE_HOME defined?
-	local xdg_cache_home = os.getenv('XDG_CACHE_HOME')
-	if xdg_cache_home then
-		return xdg_cache_home .. '/nvimtexis'
-	end
-
-	-- 3. Fall back to '$HOME/.cache'
-	return os.getenv('HOME') .. '/.cache/nvimtexis'
+	return servers
 end
 
 -- Functions to administrate the location of the 
 -- cache file to save available servers
-function nvimtexis_cache.cache_path(name)
-	local root = nvimtexis_cache.cache_root()
-	if vim.api.nvim_call_function('isdirectory', {root}) == 0 then
-		os.execute('mkdir -p ' .. root)
-	end
-	return root .. '/' .. name
-end
+-- function cache.cache_path(name)
+-- 	local root = cache.cache_root()
+-- 	if vim.api.nvim_call_function('isdirectory', {root}) == 0 then
+-- 		os.execute('mkdir -p ' .. root)
+-- 	end
+-- 	return root .. '/' .. name
+-- end
 
 -- Load cached list of servers and check which ones are still online.
 -- Add this nvim instance to list of servers. Saver list to cache file.
-function nvimtexis_cache.prune_servernames()
+function cache.prune_servernames()
 	-- Load servernames from file
-	local servers_file = io.open(nvimtexis_cache.servernames, "r")
+	local servers_file = io.open(cache.filename, "r")
 	local servers = {}
 	if servers_file ~= nil then
 		for line in servers_file:lines() do
@@ -78,14 +73,8 @@ function nvimtexis_cache.prune_servernames()
 	end
 	
 	-- Write the pruned list to file
-	write_to_file(nvimtexis_cache.servernames, available_servernames)
+	write_to_file(cache.filename, available_servernames)
 end
 
-function nvimtexis_cache.init_servernames()
-	nvimtexis_cache.servernames =
-							nvimtexis_cache.cache_path('nvim_servernames.log')
-end
 
-nvimtexis_cache.nvimtexis_vise_cmd = 'edit'
-
-return nvimtexis_cache
+return cache
