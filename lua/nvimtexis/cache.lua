@@ -9,7 +9,7 @@ local cache = {}
 ---@return string # multi-line string, each line represents a sever address
 function cache.servernames()
 	---@type integer
-	local fd = assert(uv.fs_open(Config.filename, "r", 420))
+	local fd = assert(uv.fs_open(Config.cache.filename, "r", 420))
 	---@type table
 	local stat = assert(uv.fs_fstat(fd))
 	---@type string
@@ -23,7 +23,7 @@ end
 ---@param data string[]
 function cache.write(data)
 	---@type integer
-	local fd = assert(uv.fs_open(Config.filename, 'w', 438))
+	local fd = assert(uv.fs_open(Config.cache.filename, 'w', 438))
 	-- cache file needs to end with empty line
 	assert(uv.fs_write(fd, table.concat(data, '\n') .. '\n '))
 	assert(uv.fs_close(fd))
@@ -56,7 +56,7 @@ function cache.prune_servernames()
 	if ok_servernames then
 		-- check which servers are still active
 		---@cast servers_str string
-		for server in vim.split(servers_str, "\n") do
+		for server in servers_str:gmatch("(.-)\n") do
 			---@type boolean, integer
 			local ok, socket = pcall(
 				vim.api.nvim_call_function,
