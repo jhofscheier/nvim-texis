@@ -3,12 +3,25 @@
 
 local view = {}
 
+local Config = require("nvimtexis.config")
 local util = require('nvimtexis.util')
 local uv = vim.loop
 
+---Opens the file `filename` and jumps to given line number `line`.
+---@param filename string
+---@param line integer
+---@return boolean
 function view.inverse_search(filename, line)
+	---@type nil|function()
+	local pre_cmd = Config.inverse_search.pre_cmd
+	if pre_cmd ~= nil then
+		pre_cmd()
+	end
+
 	-- resolve possible symlinks
+	---@type string
 	local file = uv.fs_realpath(filename)
+	---@type integer, integer, integer, boolean
 	local buf, win, tab, ok
 
 	-- is file already loaded into a buffer?
@@ -44,6 +57,13 @@ function view.inverse_search(filename, line)
 	end
 
 	vim.api.nvim_win_set_cursor(win, { line, 0 })
+
+	---@type nil|function()
+	local post_cmd = Config.inverse_search.post_cmd
+	if post_cmd ~= nil then
+		post_cmd()
+	end
+
 	return true
 end
 
