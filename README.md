@@ -1,34 +1,161 @@
 # nvim-texis
 This [Neovim](https://neovim.io) plugin provides inverse search functionality for TeX-PDF synchronisation. It is inspired by VimTeX's inverse search implementation (see [VimTeX pull request #2219](https://github.com/lervag/vimtex/pull/2219))
 
-# Requirements
-nvim-texis requires Neovim version 0.4.3, a working LaTeX installation with synctex, and a PDF viewer supporting synctex (for example, [Evince](https://wiki.gnome.org/Apps/Evince), [Okular](https://okular.kde.org/), [Skim](https://sourceforge.net/p/skim-app/wiki/TeX_and_PDF_Synchronization), [SumatraPDF](https://www.sumatrapdfreader.org/free-pdf-reader.html), or [Zathura](https://pwmt.org/projects/zathura/)).
+## Requirements
+- [Neovim](https://github.com/neovim/neovim) 0.8+
+- Working LaTeX installation with synctex (for example, [TeX Live](https://tug.org/texlive/))
+- PDF viewer supporting synctex (for example, [Evince](https://wiki.gnome.org/Apps/Evince), [Okular](https://okular.kde.org/), [sioyek](https://github.com/ahrm/sioyek), [Skim](https://sourceforge.net/p/skim-app/wiki/TeX_and_PDF_Synchronization), [SumatraPDF](https://www.sumatrapdfreader.org/free-pdf-reader.html), or [Zathura](https://pwmt.org/projects/zathura/)).
+- [TexLab](https://github.com/latex-lsp/texlab)
+- [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)
 
-# Installation
-Using [vim-plug](https://github.com/junegunn/vim-plug)
-```vimscript
-Plug 'jhofscheier/nvim-texis'
-```
+## Installation
+Install the plugin with your preferred package manager:
 
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+### [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
 ```lua
 use 'jhofscheier/nvim-texis'
 ```
-Enable the plugin by setting `nvimtexis_enabled` to true. For example, in `init.vim` add
-```vimscript
-let g:nvimtexis_enabled = v:true
-```
-Alternatively, add the following line to your `init.lua`
+
+Then run `require("nvimtexis").setup({ your options })` at an appropriate place in your config code.
+Refer to the [Configuration](#configuration) Section below for further details about available options.
+
+### [lazy.nvim](https://github.com/folke/lazy.nvim)
 ```lua
-vim.g.nvimtexis_enabled = true
+{
+    "jhofscheier/nvim-texis",
+    dependencies = { "neovim/nvim-lspconfig", },
+    opts = {
+        -- your configuration comes here
+        -- or leave it empty to use the default settings
+        -- refer to the configuration section below
+    },
+},
 ```
 
-# Configuration
+## Configuration
+
+**nvim-texis.nvim** is configured using the `setup` function.
+This function accepts an optional argument: a table containing your settings.
+Please refer to the default settings below.
+
+```lua
+{
+    "jhofscheier/nvim-texis",
+    dependencies = { "neovim/nvim-lspconfig", },
+    opts = {
+        cache = {
+            ---path and filename where nvim-rpc-servernames are stored
+            filename = vim.api.nvim_call_function(
+                'stdpath',
+                {'cache'}
+            ) .. '/nvim_servernames.log',
+        },
+        inverse_search = {
+            ---command used for inverse search to open file (equivalent to `:e`)
+            edit_cmd = vim.cmd.edit,
+            ---nil or function that is executed before inverse search is executed
+            ---@type nil|function()
+            pre_cmd = nil,
+            ---nil or function that is exectued after inverse seach is executed
+            ---@type nil|function()
+            post_cmd = nil,
+        },
+    },
+},
+```
+
+The `inverse_search.pre_cmd` and `inverse_search.post_cmd` hooks can be used to customise the inverse search feature.
+For instance, if you use the [kitty](https://github.com/kovidgoyal/kitty) terminal, you can implement a `post_cmd` hook that refocuses on the terminal each time an inverse search is executed.
+This provides an efficient and smooth editing experience.
+
+```lua
+post_cmd = function ()
+        vim.fn.system([[osascript -e 'activate application "kitty"']])
+    end
+```
+
+This `post_cmd` hook is intentionally simplistic and works optimally when a single instance of the kitty terminal is open.
+However, if your workflow involves multiple kitty OS windows or tabs within kitty, you may require a more sophisticated `post_cmd` hook.
+
+## nvim-lspconfig Configuration Guide
+
+**nvim-texis** is designed to support inverse search, but not forward search.
+This plugin is optimised to work synergistically with the [TexLab](https://github.com/latex-lsp/texlab) LSP server and [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig).
+To assist you with setting up forward search using [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig), we have provided a sample configuration below:
+
+```lua
+{
+    "neovim/nvim-lspconfig",
+    dependencies = {
+        -- your dependencies
+    },
+    config = function ()
+        local lsp = require("lspconfig")
+        -- your other nvim-lsp config code
+
+        lsp.texlab.setup({
+            filetypes = { 'tex', 'bib', 'plaintex' },
+            on_attach = -- your on_attach function
+            log_level = vim.lsp.protocol.MessageType.Log,
+            message_level = vim.lsp.protocol.MessageType.Log,
+            flags = {
+                debounce_text_changes = 150,
+            },
+            settings = {
+                texlab = {
+                    -- if you want to use chktex
+                    chktex = { onOpenAndSave = true },
+                    formaterLineLength = 80,
+                    forwardSearch = {
+                        executable = "sioyek",
+                        args = {
+                            "--forward-search-file",
+                            "%f",
+                            "--forward-search-line",
+                            "%l",
+                            "%p",
+                        },
+                    },
+                    -- configuration suggestion for Skim
+                    -- forwardSearch = {
+                    --     executable = "/Applications/Skim.app/Contents/SharedSupport/displayline",
+                    --     args = {"-g", "%l", "%p", "%f"},
+                    -- },
+                },
+            },
+            capabilities = -- your capabilities
+        })
+    end,
+}
+```
+
+## Usage
 
 Compile LaTeX documents with synctex enabled (for example, by using the `-synctex` or `--synctex` flag).
 
-Configure your PDF viewer to communicate with Neovim. This step will depend on the chosen viewer. You need a viewer that has an option called something like "inverse search command-line" where you can specify a shell command to perform the inverse search. The target file and line are usually provided via interpolation variables, say `%file` for the file and `%line` for the line. A typical shell command looks like this:
-```shell
+You will need to configure your PDF viewer to communicate with Neovim.
+This step will depend on the chosen viewer.
+Ensure your viewer includes an option akin to "inverse search command-line".
+This allows you to set a shell command to execute the inverse search.
+
+The target file and line number are typically specified using interpolation variables.
+For instance, `%file` would represent the file, while `%line` would denote the line number.
+A typical shell command looks like this:
+```bash
 nvim --headless -c "set filetype=nvimtexis" -c "NvimTeXInverseSearch %line, '%file'"
 ```
-For example, for [Skim](https://sourceforge.net/p/skim-app/wiki/TeX_and_PDF_Synchronization/#tex-pdf-synchronization) go to the Sync preferences, choose the 'Custom' preset, use `nvim` for 'Command' and `--headless -c "set filetype=nvimtexis" -c "NvimTeXInverseSearch %line, '%file'"` as 'Arguments. Now you can perform an inverse search by Shift-Command-click on a point in a PDF document. 
+
+### Skim
+For [Skim](https://sourceforge.net/p/skim-app/wiki/TeX_and_PDF_Synchronization/#tex-pdf-synchronization) go to the Sync preferences, choose the 'Custom' preset, use `nvim` for 'Command' and `--headless -c "NvimTeXInverseSearch '%file' %line"` as arguments.
+Now you can perform an inverse search by Shift-Command-click on a point in a PDF document. 
+
+### sioyek
+For [sioyek](https://github.com/ahrm/sioyek) you will need to modify the `prefs_user` settings.
+Run the `:prefs_user` command and add the following lines to your configuration:
+
+```bash
+# The command to use when trying to do inverse search into a LaTeX document. Uncomment and provide your own command.
+# %1 expands to the name of the file and %2 expans to the line number.
+inverse_search_command 		nvim --headless -c "NvimTeXInverseSearch '%1' %2"
+```
