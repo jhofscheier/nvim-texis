@@ -7,21 +7,25 @@ local defaults = {
 	---@class Cache.Config
 	---@field filename string
 	cache = {
-		filename = vim.api.nvim_call_function('stdpath', {'cache'}) ..
-													'/nvim_servernames.log',
+		---path and filename where nvim-rpc-servernames are stored
+		filename = vim.api.nvim_call_function(
+			'stdpath',
+			{'cache'}
+		) .. '/nvim_servernames.log',
 	},
 	---@class InverseSearch.Config
 	---@field edit_cmd function()
-	---@field pre_cmd? function()
-	---@field post_cmd? function()
+	---@field pre_cmd? nil|function()
+	---@field post_cmd? nil|function()
 	inverse_search = {
+		---command used for inverse search to open file (equivalent to `:e`)
 		edit_cmd = vim.cmd.edit,
-		pre_cmd = function ()
-			return true
-		end,
-		post_cmd = function ()
-			return true
-		end,
+		---nil or function that is executed before inverse search is executed
+		---@type nil|function()
+		pre_cmd = nil,
+		---nil or function that is exectued after inverse seach is executed
+		---@type nil|function()
+		post_cmd = nil,
 	},
 }
 
