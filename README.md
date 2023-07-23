@@ -1,5 +1,14 @@
 # nvim-texis
-This [Neovim](https://neovim.io) plugin provides inverse search functionality for TeX-PDF synchronisation. It is inspired by VimTeX's inverse search implementation (see [VimTeX pull request #2219](https://github.com/lervag/vimtex/pull/2219))
+This [Neovim](https://neovim.io) plugin provides inverse search functionality for TeX-PDF synchronisation.
+It is inspired by VimTeX's inverse search implementation (see [VimTeX pull request #2219](https://github.com/lervag/vimtex/pull/2219)).
+
+## Table of Contents
+1. [Requirements](#requirements)
+2. [Installation](#installation)
+3. [Configuration](#configuration)
+4. [nvim-lspconfig Configuration Guide](#nvim-lspconfig-configuration-guide)
+5. [Usage](#usage)
+6. [Improving Inverse Search Performance](#improving-inverse-search-performance)
 
 ## Requirements
 - [Neovim](https://github.com/neovim/neovim) 0.8+
@@ -136,14 +145,14 @@ Compile LaTeX documents with synctex enabled (for example, by using the `-syncte
 
 You will need to configure your PDF viewer to communicate with Neovim.
 This step will depend on the chosen viewer.
-Ensure your viewer includes an option akin to "inverse search command-line".
+Ensure your viewer includes an option akin to “inverse search command-line”.
 This allows you to set a shell command to execute the inverse search.
 
 The target file and line number are typically specified using interpolation variables.
 For instance, `%file` would represent the file, while `%line` would denote the line number.
 A typical shell command looks like this:
 ```bash
-nvim --headless -c "set filetype=nvimtexis" -c "NvimTeXInverseSearch %line, '%file'"
+nvim --headless -c "NvimTeXInverseSearch '%file' %line"
 ```
 
 ### Skim
@@ -158,4 +167,23 @@ Run the `:prefs_user` command and add the following lines to your configuration:
 # The command to use when trying to do inverse search into a LaTeX document. Uncomment and provide your own command.
 # %1 expands to the name of the file and %2 expans to the line number.
 inverse_search_command 		nvim --headless -c "NvimTeXInverseSearch '%1' %2"
+```
+## Improving Inverse Search Performance
+Inverse search can consume a non-trivial amount of time for loading a “headless instance” of Neovim, particularly if you have numerous plugins installed.
+To expedite this process, consider using the following optimised inverse search command in your PDF viewer:
+
+```bash
+nvim -u NONE -i NONE --headless -c "set rtp+=[plugins path]/nvim-texis" -c "source [plugins path]/nvim-texis/plugin/nvimtexis.lua" -c "NvimTeXInverseSearch '%file' %line"
+```
+In the command above, replace `[plugins path]` with the directory path where your plugins are located.
+
+This command performs several operations:
+* `-u NONE` instructs Neovim not to load any user configuration files and plugins.
+* `-i NONE` prevents Neovim from loading the shada file.
+* `-c "set rtp+=[plugins path]/nvim-texis"` and `-c "source [plugins path]/nvim-texis/plugin/nvimtexis.lua"` are used to manually load the nvim-texis plugin.
+
+For example, if you are using [lazy.nvim](https://github.com/folke/lazy.nvim) and [sioyek](https://github.com/ahrm/sioyek), the command would typically look like this:
+
+```bash
+nvim -u NONE -i NONE --headless -c "set rtp+=~/.local/share/nvim/lazy/nvim-texis" -c "source ~/.local/share/nvim/lazy/nvim-texis/plugin/nvimtexis.lua" -c "NvimTeXInverseSearch '%1' %2"
 ```
